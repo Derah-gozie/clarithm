@@ -13,29 +13,69 @@ export class GroqProvider implements LLMProvider {
     return 'groq'
   }
 
-  async analyze(csvData: string, userPrompt: string, fileName: string): Promise<AnalysisResult> {
-    const systemPrompt = `You are a data analysis expert. Analyze the provided CSV data and generate comprehensive insights in markdown format.
+  async analyze(csvData: string, userPrompt: string, fileName: string, templateType: string = 'text-summary'): Promise<AnalysisResult> {
+    // Different prompts based on template type
+    let systemPrompt = ''
+    let userMessage = ''
 
-Your analysis should include:
-1. **Summary** - High-level overview of the data
-2. **Key Findings** - 3-5 most important discoveries (bullet points)
-3. **Trends & Patterns** - Any notable trends, correlations, or patterns
-4. **Statistical Insights** - Relevant statistics (averages, totals, distributions)
-5. **Recommendations** - Actionable recommendations based on the data
+    if (templateType === 'bar-chart') {
+      systemPrompt = `You are a data analysis expert. Analyze the CSV data and generate a bar chart visualization.
 
-Format your response in clean, well-structured markdown. Use headers, bullet points, and bold text for emphasis.
-Be specific and reference actual data values when possible.`
+IMPORTANT: You MUST respond with ONLY valid JSON in this exact format (no markdown, no code blocks, no extra text):
 
-    const userMessage = `File: ${fileName}
+{
+  "chartType": "bar",
+  "title": "Clear, descriptive chart title",
+  "xAxisLabel": "X-axis label",
+  "yAxisLabel": "Y-axis label",
+  "data": [
+    {"name": "Category1", "value": 100},
+    {"name": "Category2", "value": 200}
+  ],
+  "insights": "Brief text insights about the data (2-3 sentences)"
+}
 
-User's Request: ${userPrompt}
+Rules:
+- data array should have 3-15 items maximum
+- If data has more rows, aggregate or show top values
+- values must be numbers
+- insights should be concise markdown text`
+
+      userMessage = `File: ${fileName}
+
+User's Request: ${userPrompt || 'Create a bar chart showing the key metrics from this data'}
 
 CSV Data:
 \`\`\`csv
 ${csvData}
 \`\`\`
 
-Please analyze this data and provide insights based on my request.`
+Analyze this data and return ONLY the JSON object for the bar chart. No other text.`
+    } else {
+      // Default text summary
+      systemPrompt = `You are a data analysis expert. Analyze the provided CSV data and generate comprehensive insights in markdown format.
+
+Your analysis should prioritize the user's specific request, then include:
+1. **Summary** - High-level overview focused on user's question
+2. **Key Findings** - 3-5 most important discoveries related to the request
+3. **Trends & Patterns** - Notable trends, correlations, or patterns
+4. **Statistical Insights** - Relevant statistics (averages, totals, distributions)
+5. **Recommendations** - Actionable recommendations based on findings
+
+Format your response in clean, well-structured markdown. Use headers, bullet points, and bold text for emphasis.
+Be specific and reference actual data values when possible.`
+
+      userMessage = `File: ${fileName}
+
+User's Request: ${userPrompt || 'Provide a comprehensive analysis of this dataset'}
+
+CSV Data:
+\`\`\`csv
+${csvData}
+\`\`\`
+
+Please analyze this data and provide insights focused on the user's request.`
+    }
 
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

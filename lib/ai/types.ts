@@ -11,9 +11,10 @@ export interface LLMProvider {
    * @param csvData - Raw CSV data as string
    * @param userPrompt - User's analysis request
    * @param fileName - Name of the file being analyzed
+   * @param templateType - Template type for visualization (text-summary, bar-chart, etc.)
    * @returns Analysis result with insights and metadata
    */
-  analyze(csvData: string, userPrompt: string, fileName: string): Promise<AnalysisResult>
+  analyze(csvData: string, userPrompt: string, fileName: string, templateType?: string): Promise<AnalysisResult>
 
   /**
    * Get the name of this provider

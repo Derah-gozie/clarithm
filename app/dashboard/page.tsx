@@ -6,11 +6,13 @@ import { createClient } from '@/lib/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import BarChartVisualization from '@/components/BarChartVisualization'
 
 interface Dataset {
   id: string
   file_name: string
   prompt: string | null
+  template_type: string | null
   created_at: string
   file_size_bytes: number
   insights_status: 'pending' | 'processing' | 'completed' | 'failed' | null
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [prompt, setPrompt] = useState('')
+  const [templateType, setTemplateType] = useState('text-summary')
   const [error, setError] = useState('')
   const [generatingInsights, setGeneratingInsights] = useState<Record<string, boolean>>({})
   const router = useRouter()
@@ -138,6 +141,7 @@ export default function DashboardPage() {
         file_type: file.type || 'application/octet-stream',
         file_size_bytes: file.size,
         prompt: prompt.trim() || null,
+        template_type: templateType,
         status: 'uploaded'
       }
 
@@ -166,6 +170,7 @@ export default function DashboardPage() {
       // Reset form
       setFile(null)
       setPrompt('')
+      setTemplateType('text-summary')
       const fileInput = document.getElementById('file-input') as HTMLInputElement
       if (fileInput) fileInput.value = ''
 
@@ -281,6 +286,24 @@ export default function DashboardPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Visualization Template
+              </label>
+              <select
+                value={templateType}
+                onChange={(e) => setTemplateType(e.target.value)}
+                disabled={uploading}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50"
+              >
+                <option value="text-summary">Text Summary (Markdown)</option>
+                <option value="bar-chart">Bar Chart</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Choose how you want your insights displayed
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 What insights do you want? (Optional)
               </label>
               <textarea
@@ -378,11 +401,18 @@ export default function DashboardPage() {
                           {dataset.insights_cost && ` • $${dataset.insights_cost.toFixed(4)}`}
                         </div>
                       </div>
-                      <div className="prose prose-sm max-w-none bg-gray-50 p-4 rounded">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {dataset.insights_markdown}
-                        </ReactMarkdown>
-                      </div>
+
+                      {/* Conditional rendering based on template type */}
+                      {dataset.template_type === 'bar-chart' ? (
+                        <BarChartVisualization jsonData={dataset.insights_markdown} />
+                      ) : (
+                        <div className="prose prose-sm max-w-none bg-gray-50 p-4 rounded">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {dataset.insights_markdown}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
                       {dataset.insights_generated_at && (
                         <p className="text-xs text-gray-500 mt-2">
                           Generated {new Date(dataset.insights_generated_at).toLocaleString()}

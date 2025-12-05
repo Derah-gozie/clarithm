@@ -13,7 +13,7 @@ export class ClaudeProvider implements LLMProvider {
     return 'claude'
   }
 
-  async analyze(csvData: string, userPrompt: string, fileName: string): Promise<AnalysisResult> {
+  async analyze(csvData: string, userPrompt: string, fileName: string, templateType: string = 'text-summary'): Promise<AnalysisResult> {
     const systemPrompt = `You are a data analysis expert. Analyze the provided CSV data and generate comprehensive insights in markdown format.
 
 Your analysis should include:

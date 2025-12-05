@@ -109,7 +109,8 @@ export async function POST(request: NextRequest) {
     const result = await provider.analyze(
       limitedCsvData,
       dataset.prompt || 'Provide a comprehensive analysis of this dataset',
-      dataset.file_name
+      dataset.file_name,
+      dataset.template_type || 'text-summary'
     )
 
     console.log(`✅ Insights generated successfully!`, {
